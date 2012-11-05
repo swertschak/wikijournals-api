@@ -4,43 +4,64 @@ __author__ = 'kruemel'
 import catlib
 import wikipedia
 import random
+import uuid
 
 # Utility routines
-def publicationURL(content):
+def initPublicationList(mysite, logger):
     """
-    Create Publication URL from given parameters (JournalTitle)
+    Create temporary list of all Publications including url (uuid) and title
     """
-    publicationURL=content["JournalTitle"]
+    publicationList=catlib.Category(mysite,"Publikation")
+    initPublicationList={}
+    for j in publicationList.articles():
+        mypage=wikipedia.Page(mysite,j.title())
+        t=mypage.get()
+        test=t.split("=")
+        tempString=test[1].split("\n")
+        logger.info(tempString[0])
+        initPublicationList.update({j.title():tempString[0]})
+    return initPublicationList
+
+
+def publicationURL():
+    """
+    Create Publication URL from uuid function
+    """
+    publicationURL=str(uuid.uuid4())
     return publicationURL
 
 def attributeList():
     """
     Defines the list of publication attributes
     """
-    attributeList=["JournalTitle","ISSN","Publisher","JournalWebsite","JournalDNBInfo"]
+    attributeList=["PublicationTitle","Publisher","ReleaseStatus"]
     return attributeList
 
-def checkIfPublicationExist(title,mysite,logger):
+def checkIfPublicationExist(title,logger,publicationList):
     """
     Checks if given publication exists
     """
     check=False
-    mypage=wikipedia.Page(mysite,title)
-    logger.info(title)
-    if mypage.exists():
-        check=True
+
+    for j in publicationList.items():
+        if j[1]==title:
+            check=True
+
+    if check:
+        logger.warning("Publication "+title+" always exist")
     else:
-        logger.warning("Publication "+" don´t exist")
+        logger.warning("Publication "+title+" don´t exist")
+
     return check
 
 # Routines for content creation
-def createPublication(content, mysite, logger):
+def createPublication(content, mysite, logger, publicationList):
     """
     Create new Article in wikijournals
     """
 
-    if not checkIfPublicationExist(content["JournalTitle"], mysite, logger):
-        newPublication="{{Journal\n"
+    if not checkIfPublicationExist(content["PublicationTitle"],logger,publicationList):
+        newPublication="{{Publication\n"
         for key in attributeList():
             if key in content:
                 newPublication+="|"+key+"="+content[key]+"\n"
@@ -48,28 +69,29 @@ def createPublication(content, mysite, logger):
 
         comment="New publication added"
 
-        mypage=wikipedia.Page(mysite,publicationURL(content))
+
+        mypage=wikipedia.Page(mysite,publicationURL())
+
         mypage.put(newPublication,comment)
-        logger.info("Publication "+publicationURL(content)+" added")
+        logger.info("Publication "+publicationURL()+" added")
 
 # Routines for content deletion
 def removePublication(title,mysite,logger):
     """
     Remove given article
     """
-    if checkIfPublicationExist(title,mysite,logger):
-        mypage=wikipedia.Page(mysite,title)
-        mypage.delete(reason="Deleting by bot",prompt="False",)
-        logger.info("Publication "+title+" was deleted")
+    mypage=wikipedia.Page(mysite,title)
+    mypage.delete(reason="Deleting by bot",prompt="False",)
+    logger.info("Publication "+title+" was deleted")
 
 # Routines for content update
-def updatePublication(content, mysite, logger):
+def updatePublication(content, mysite, logger, publicationList):
     """
     Update existing Publication in wikijournals
     """
 
-    if checkIfPublicationExist(publicationURL(content),mysite,logger):
-        newPublication="{{Journal\n"
+    if checkIfPublicationExist(publicationURL(),logger, publicationList):
+        newPublication="{{Publication\n"
         for key in attributeList():
             if key in content:
                 newPublication+="|"+key+"="+content[key]+"\n"
@@ -77,9 +99,9 @@ def updatePublication(content, mysite, logger):
 
         comment="Publication updated"
 
-        mypage=wikipedia.Page(mysite,publicationURL(content))
+        mypage=wikipedia.Page(mysite,publicationURL())
         mypage.put(newPublication,comment)
-        logger.info("Publication "+publicationURL(content)+" updated")
+        logger.info("Publication "+publicationURL()+" updated")
 
 # Routines for content reading / querying
 
@@ -90,50 +112,53 @@ def listAllPublication(mysite):
     articleCategory=catlib.Category(mysite,"Publikation")
     return articleCategory.articlesList()
 
-def readAttributes(title, mysite):
+def readAttributes(title, mysite, logger):
     """
     Return the value of an attribute for a given page
     """
     readAttribute={}
-    mypage=wikipedia.Page(mysite,title)
-    if mypage.exists():
-        articleText=mypage.get()
-        articleText=articleText.replace("{{Journal\n","")
-        endAttributes=articleText.find("\n}}")
-        articleText=articleText[0:endAttributes]
-        tempList=articleText.split("\n")
-        for i in tempList:
-            record=i.replace("|","")
-            record=record.split("=")
-            readAttribute.update({record[0]:record[1]})
+
+    publicationList=catlib.Category(mysite,"Publikation")
+    for j in publicationList.articles():
+        mypage=wikipedia.Page(mysite,j.title())
+        t=mypage.get()
+        logger.info(j.title())
+        if t.find("PublicationTitle="+title)>-1:
+            articleText=mypage.get()
+            articleText=articleText.replace("{{Publication\n","")
+            endAttributes=articleText.find("\n}}")
+            articleText=articleText[0:endAttributes]
+            tempList=articleText.split("\n")
+            for i in tempList:
+                record=i.replace("|","")
+                record=record.split("=")
+                readAttribute.update({record[0]:record[1]})
     return readAttribute
 
 # Routines for tests
 def testPublication():
     testPublication={}
-    testPublication.update({"JournalTitle":"Berliner Morgenpost"})
-    testPublication.update({"ISSN":"1433-3511"})
-    testPublication.update({"Publisher":"Axel Springer AG"})
-    testPublication.update({"JournalWebsite":"http://www.morgenpost.de/"})
-    testPublication.update({"JournalDNBInfo":"http://d-nb.info/018318312"})
+    testPublication.update({"PublicationTitle":"Nordkurier"})
+    testPublication.update({"Publisher":"Kurierverlags GmbH & Co. KG"})
+    testPublication.update({"ReleaseStatus":"Freigegeben"})
     return testPublication
 
-def testCreatePublication(mysite,logger):
+def testCreatePublication(mysite,logger, publicationList):
     """
     Test creating a single publication
     """
     logger.info("Start test - Create publication -")
     testContent=testPublication()
-    createPublication(testContent,mysite,logger)
+    createPublication(testContent,mysite,logger,publicationList)
     logger.info("End test - Create publication -")
 
-def testUpdatePublication(mysite,logger):
+def testUpdatePublication(mysite,logger,publicationList):
     """
     Test updating a single publication
     """
     logger.info("Start test - Update publication -")
     testContent=testPublication()
-    updatePublication(testContent,mysite,logger)
+    updatePublication(testContent,mysite,logger,publicationList)
     logger.info("End test - Update publication -")
 
 def testRemovePublication(mysite,logger):
@@ -142,7 +167,8 @@ def testRemovePublication(mysite,logger):
     """
     logger.info("Start test - Remove publication -")
     publicationList=listAllPublication(mysite)
-    randomPublication=random.randint(1,len(publicationList))
+    randomPublication=random.randint(0,len(publicationList)-1)
+    logger.info(randomPublication)
     logger.info(publicationList[randomPublication].title())
     removePublication(publicationList[randomPublication].title(),mysite,logger)
     logger.info("End test - Remove publication -")
@@ -177,16 +203,18 @@ def testReadAttribute(mysite,logger):
 
     publicationList=listAllPublication(mysite)
     randomPublication=random.randint(1,len(publicationList))
+    logger.info(randomPublication)
     publicationTitle=publicationList[randomPublication].title()
     logger.info(publicationTitle)
 
     tempAttributeList=attributeList()
-    randomAttribute=random.randint(1,len(tempAttributeList))
+    randomAttribute=random.randint(0,len(tempAttributeList)-1)
     logger.info(randomAttribute)
     attribute=tempAttributeList[randomAttribute]
     logger.info(attribute)
 
-    attributes=readAttributes(publicationTitle,mysite)
+    attributes=readAttributes(publicationTitle,mysite, logger)
+
     if attribute in attributes:
         logger.info(attributes[attribute])
 

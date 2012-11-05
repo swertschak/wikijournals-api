@@ -39,11 +39,14 @@ def testPublications(family, language, logger):
     # init mysite
     mysite=wikipedia.getSite(language,family)
 
+    #init publications
+    publicationList=wikijournalsPublications.initPublicationList(mysite,logger)
+
     # test creation
-    wikijournalsPublications.testCreatePublication(mysite,logger)
+    wikijournalsPublications.testCreatePublication(mysite,logger,publicationList)
 
     # test update
-    wikijournalsPublications.testUpdatePublication(mysite,logger)
+    wikijournalsPublications.testUpdatePublication(mysite,logger,publicationList)
 
     # test reading
     # list all
@@ -95,7 +98,7 @@ def checkCorrectNumbersOfOptions(args,Count):
     return Check
 
 # Setup Logging
-logFile="c:\\projekte\\wikijournals\\logs\\wikijournals.log"
+logFile="C:\\Projekte\\development\\github\\wikijournals-api\\logs\\wikijournals.log"
 
 handler = logging.StreamHandler(sys.stdout)
 frm = logging.Formatter("%(asctime)s [%(levelname)-8s] %(message)s",
