@@ -57,7 +57,7 @@ def checkIfPublicationExist(title,logger,publicationList):
 # Routines for content creation
 def createPublication(content, mysite, logger, publicationList):
     """
-    Create new Article in wikijournals
+    Create new Publication in wikijournals
     """
     check=checkIfPublicationExist(content["PublicationTitle"],logger,publicationList)
 
@@ -80,7 +80,7 @@ def createPublication(content, mysite, logger, publicationList):
 # Routines for content deletion
 def removePublication(title,mysite,logger):
     """
-    Remove given article
+    Remove given publication
     """
     mypage=wikipedia.Page(mysite,title)
     mypage.delete(reason="Deleting by bot",prompt="False",)
@@ -122,7 +122,6 @@ def readAttributes(title, mysite, logger,publicationList):
     """
     readAttribute={}
 
-    #publicationList=catlib.Category(mysite,"Publikation")
     for key in publicationList.iterkeys():
         if publicationList[key]==title:
             mypage=wikipedia.Page(mysite,key)

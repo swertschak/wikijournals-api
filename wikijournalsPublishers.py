@@ -4,42 +4,63 @@ __author__ = 'kruemel'
 import catlib
 import wikipedia
 import random
+import uuid
 
 # Utility routines
-def publisherURL(content):
+def initPublisherList(mysite, logger):
+    """
+    Create temporary list of all Publishers including url (uuid) and title
+    """
+    publisherList=catlib.Category(mysite,"Verlag")
+    initPublisherList={}
+    for j in publisherList.articles():
+        mypage=wikipedia.Page(mysite,j.title())
+        t=mypage.get()
+        test=t.split("=")
+        tempString=test[1].split("\n")
+        initPublisherList.update({j.title():tempString[0]})
+    return initPublisherList
+
+def publisherURL():
     """
     Create Publisher URL from given parameters (Publisher)
     """
-    publisherURL=content["Publisher"]
+    publisherURL=str(uuid.uuid4())
     return publisherURL
 
 def attributeList():
     """
     Defines the list of publisher attributes
     """
-    attributeList=["Publisher","PublisherZipcode","PublisherLocation","PublisherStreet","PublisherWebsite"]
+    attributeList=["Publisher","PublisherHomepage","PublisherLocation","PublisherZipCode","PublisherAdress","ReleaseStatus"]
     return attributeList
 
-def checkIfPublisherExist(title,mysite,logger):
+def checkIfPublisherExist(title,logger,publisherList):
     """
     Checks if given publisher exists
     """
-    check=False
-    mypage=wikipedia.Page(mysite,title)
-    logger.info(title)
-    if mypage.exists():
-        check=True
+    check=[False,"0"]
+
+    for j in publisherList.items():
+        if j[1]==title:
+            check=[True,j[0]]
+            logger.info(j[0])
+
+    if check[0]:
+        logger.warning("Publisher "+title+" always exist")
     else:
-        logger.warning("Publisher "+" don´t exist")
+        logger.warning("Publisher "+title+" don´t exist")
+
     return check
 
 # Routines for content creation
-def createPublisher(content, mysite, logger):
+def createPublisher(content, mysite, logger, publisherList):
     """
-    Create new publisher in wikijournals
+    Create new publisher
     """
+    check=checkIfPublisherExist(content["Publisher"],logger,publisherList)
 
-    if not checkIfPublisherExist(content["Publisher"], mysite, logger):
+    if not check[0]:
         newPublisher="{{Publisher\n"
         for key in attributeList():
             if key in content:
@@ -48,27 +69,31 @@ def createPublisher(content, mysite, logger):
 
         comment="New publisher added"
 
-        mypage=wikipedia.Page(mysite,publisherURL(content))
+        newPublisherUrl=publisherURL()
+
+        mypage=wikipedia.Page(mysite,newPublisherUrl)
+
         mypage.put(newPublisher,comment)
-        logger.info("Publisher "+publisherURL(content)+" added")
+        logger.info("Publisher "+content["Publisher"]+" with URL"+newPublisherUrl+" added")
 
 # Routines for content deletion
 def removePublisher(title,mysite,logger):
     """
-    Remove given article
+    Remove given publisher
     """
-    if checkIfPublisherExist(title,mysite,logger):
-        mypage=wikipedia.Page(mysite,title)
-        mypage.delete(reason="Deleting by bot",prompt="False",)
-        logger.info("Publisher "+title+" was deleted")
+    mypage=wikipedia.Page(mysite,title)
+    mypage.delete(reason="Deleting by bot",prompt="False",)
+    logger.info("Publisher "+title+" was deleted")
 
 # Routines for content update
-def updatePublisher(content, mysite, logger):
+def updatePublisher(content, mysite, logger, publisherList):
     """
     Update existing Publisher in wikijournals
     """
 
-    if checkIfPublisherExist(publisherURL(content),mysite,logger):
+    check=checkIfPublisherExist(content["Publisher"],logger, publisherList)
+
+    if check[0]:
         newPublisher="{{Publisher\n"
         for key in attributeList():
             if key in content:
@@ -77,36 +102,41 @@ def updatePublisher(content, mysite, logger):
 
         comment="Publisher updated"
 
-        mypage=wikipedia.Page(mysite,publisherURL(content))
+        mypage=wikipedia.Page(mysite,check[1])
         mypage.put(newPublisher,comment)
-        logger.info("Publisher "+publisherURL(content)+" updated")
+        logger.info("Publisher "+content["Publisher"]+" with URL "+check[1]+" updated")
 
 # Routines for content reading / querying
 
-def listAllPublisher(mysite):
-    """
-    Create a list of all publishers in wikijournals
-    """
-    articleCategory=catlib.Category(mysite,"Verlag")
-    return articleCategory.articlesList()
+#def listAllPublisher(mysite):
+#    """
+#    Create a list of all publishers in wikijournals
+#    """
+#    articleCategory=catlib.Category(mysite,"Verlag")
+#    return articleCategory.articlesList()
 
-def readAttributes(title, mysite):
+def readAttributes(title, mysite, logger,publisherList):
     """
     Return the value of an attribute for a given page
     """
     readAttribute={}
-    mypage=wikipedia.Page(mysite,title)
-    if mypage.exists():
-        articleText=mypage.get()
-        articleText=articleText.replace("{{Publisher\n","")
-        endAttributes=articleText.find("\n}}")
-        articleText=articleText[0:endAttributes]
-        tempList=articleText.split("\n")
-        for i in tempList:
-            record=i.replace("|","")
-            record=record.split("=")
-            readAttribute.update({record[0]:record[1]})
-    return readAttribute
+
+    for key in publisherList.iterkeys():
+        if publisherList[key]==title:
+            mypage=wikipedia.Page(mysite,key)
+            t=mypage.get()
+            if t.find("Publisher="+title)>-1:
+                articleText=mypage.get()
+                articleText=articleText.replace("{{Publisher\n","")
+                endAttributes=articleText.find("\n}}")
+                articleText=articleText[0:endAttributes]
+                tempList=articleText.split("\n")
+                for i in tempList:
+                    record=i.replace("|","")
+                    record=record.split("=")
+                    readAttribute.update({record[0]:record[1]})
+                return readAttribute
+
 
 # Routines for tests
 def testPublisher():
@@ -114,80 +144,95 @@ def testPublisher():
     testPublication.update({"Publisher":"Linux New Media AG"})
     testPublication.update({"PublisherZipcode":"81739"})
     testPublication.update({"PublisherLocation":u"München"})
-    testPublication.update({"PublisherStreet":u"Putzbrunner Straße 71"})
-    testPublication.update({"PublisherWebsite":"http://www.linuxnewmedia.de/"})
+    testPublication.update({"PublisherAdress":u"Putzbrunner Straße 71"})
+    testPublication.update({"PublisherHomepage":"http://www.linuxnewmedia.de/"})
+    testPublication.update({"ReleaseStatus":"Freigegeben"})
     return testPublication
 
-def testCreatePublisher(mysite,logger):
+def testCreatePublisher(mysite,logger, publisherList):
     """
     Test creating a single publisher
     """
     logger.info("Start test - Create publisher -")
     testContent=testPublisher()
-    createPublisher(testContent,mysite,logger)
+    createPublisher(testContent,mysite,logger,publisherList)
     logger.info("End test - Create publisher -")
 
-def testUpdatePublisher(mysite,logger):
+def testUpdatePublisher(mysite,logger,publisherList):
     """
     Test updating a single publisher
     """
     logger.info("Start test - Update publisher -")
     testContent=testPublisher()
-    updatePublisher(testContent,mysite,logger)
+    updatePublisher(testContent,mysite,logger,publisherList)
     logger.info("End test - Update publisher -")
 
-def testRemovePublisher(mysite,logger):
+def testRemovePublisher(mysite,logger,publisherList):
     """
     Test removing a random single publisher
     """
     logger.info("Start test - Remove publisher -")
-    publisherList=listAllPublisher(mysite)
-    randomPublisher=random.randint(1,len(publisherList))
-    logger.info(publisherList[randomPublisher].title())
-    removePublisher(publisherList[randomPublisher].title(),mysite,logger)
-    logger.info("End test - Remove publisher -")
+    count=0
+    randomPublisher=random.randint(0,len(publisherList)-1)
+    logger.info(randomPublisher)
+    for key in publisherList.iterkeys():
+        count+=1
+        if count==randomPublisher:
+            logger.info(publisherList[key])
+            logger.info(key)
+            removePublisher(key,mysite,logger)
+            logger.info("End test - Remove publisher -")
+            break
 
-def testListAllPublishers(mysite, logger):
+def testListAllPublishers(mysite, logger,publisherList):
     """
     Test reading all publishers
     """
     logger.info("Start test - List all publishers -")
-    for publisher in listAllPublisher(mysite):
-        logger.info(publisher)
-    logger.info("End test - List all publisher -")
+    for publisher in publisherList.iterkeys():
+        logger.info(publisher+":"+publisherList[publisher])
+    logger.info("End test - List all publications -")
 
-def testReadSingleRandomPublisher(mysite, logger):
+def testReadSingleRandomPublisher(mysite,logger,publisherList):
     """
     Test reading a single random publisher, including content
     """
     logger.info("Start test - Read single random publisher -")
-    publisherList=listAllPublisher(mysite)
     randomPublisher=random.randint(1,len(publisherList))
-    publisherText=publisherList[randomPublisher].get()
-    logger.info(publisherText)
-    logger.info("End test - Read single random publication -")
+    count=0
+    for key in publisherList.iterkeys():
+        count+=1
+        if count==randomPublisher:
+            mypage=wikipedia.Page(mysite,key)
+            logger.info(publisherList[key])
+            publisherText=mypage.get()
+            logger.info(publisherText)
+            logger.info("End test - Read single random publisher -")
+            break
 
-def testReadAttribute(mysite,logger):
+def testReadAttribute(mysite,logger,publisherList):
     """
     Test reading value for an random attribute for a random publisher
     """
 
     logger.info("Start test - Read attributes -")
 
-    publisherList=listAllPublisher(mysite)
     randomPublisher=random.randint(1,len(publisherList))
-    publisherTitle=publisherList[randomPublisher].title()
-    logger.info(publisherTitle)
-
-    tempAttributeList=attributeList()
-    randomAttribute=random.randint(1,len(tempAttributeList))
-    logger.info(randomAttribute)
-    attribute=tempAttributeList[randomAttribute]
-    logger.info(attribute)
-
-    attributes=readAttributes(publisherTitle,mysite)
-    if attribute in attributes:
-        logger.info(attributes[attribute])
+    logger.info(randomPublisher)
+    count=0
+    for key in publisherList.iterkeys():
+        count+=1
+        if count==randomPublisher:
+            publisherTitle=publisherList[key]
+            logger.info(publisherTitle)
+            tempAttributeList=attributeList()
+            randomAttribute=random.randint(0,len(tempAttributeList)-1)
+            logger.info(randomAttribute)
+            attribute=tempAttributeList[randomAttribute]
+            logger.info(attribute)
+            attributes=readAttributes(publisherTitle,mysite,logger,publisherList)
+            if attribute in attributes:
+                logger.info(attributes[attribute])
 
     logger.info("End test - Read attributes -")
 

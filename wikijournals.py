@@ -50,39 +50,42 @@ def testPublications(family, language, logger):
 
     # test reading
     # list all
-    wikijournalsPublications.testListAllPublications(mysite,logger)
+    wikijournalsPublications.testListAllPublications(mysite,logger,publicationList)
 
     # list random page
-    wikijournalsPublications.testReadSingleRandomPublication(mysite, logger)
+    wikijournalsPublications.testReadSingleRandomPublication(mysite, logger,publicationList)
 
     # read attributes
-    wikijournalsPublications.testReadAttribute(mysite,logger)
+    wikijournalsPublications.testReadAttribute(mysite,logger,publicationList)
 
     # test removing
-    wikijournalsPublications.testRemovePublication(mysite,logger)
+    wikijournalsPublications.testRemovePublication(mysite,logger,publicationList)
 
 def testPublishers(family, language, logger):
     # init mysite
     mysite=wikipedia.getSite(language,family)
 
+    #init publications
+    publisherList=wikijournalsPublishers.initPublisherList(mysite,logger)
+
     # test creation
-    wikijournalsPublishers.testCreatePublisher(mysite,logger)
+    wikijournalsPublishers.testCreatePublisher(mysite,logger,publisherList)
 
     # test update
-    wikijournalsPublishers.testUpdatePublisher(mysite,logger)
+    wikijournalsPublishers.testUpdatePublisher(mysite,logger,publisherList)
 
     # test reading
     # list all
-    wikijournalsPublishers.testListAllPublishers(mysite,logger)
+    wikijournalsPublishers.testListAllPublishers(mysite,logger,publisherList)
 
     # list random page
-    wikijournalsPublishers.testReadSingleRandomPublisher(mysite, logger)
+    wikijournalsPublishers.testReadSingleRandomPublisher(mysite, logger,publisherList)
 
     # read attributes
-    wikijournalsPublishers.testReadAttribute(mysite,logger)
+    wikijournalsPublishers.testReadAttribute(mysite,logger,publisherList)
 
     # test removing
-    wikijournalsPublishers.testRemovePublisher(mysite,logger)
+    wikijournalsPublishers.testRemovePublisher(mysite,logger,publisherList)
 
 def checkCorrectNumbersOfOptions(args,Count):
     """

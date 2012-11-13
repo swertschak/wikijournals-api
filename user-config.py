@@ -6,7 +6,7 @@
 # The family of sites we are working on. wikipedia.py will import
 # families/xxx_family.py so if you want to change this variable,
 # you need to write such a file.
-family = 'wikijournals_dev'
+family = 'wikijournals_info'
 
 # The language code of the site we're working on.
 mylang = 'de'
@@ -14,7 +14,7 @@ mylang = 'de'
 # The dictionary usernames should contain a username for each site where you
 # have a bot account.
 
-for _u in ['wikijournals_jiffybox','wikijournals_local','wikijournals_dev']:
+for _u in ['wikijournals_jiffybox','wikijournals_local','wikijournals_info']:
     for _l in ['de', 'en', 'fr']:
        usernames[_u][_l] = 'Mybot'
        sysopnames[_u][_l] = 'Mybot'
