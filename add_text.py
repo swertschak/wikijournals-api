@@ -39,6 +39,7 @@ Furthermore, the following command line parameters are supported:
 -noreorder        Avoid to reorder cats and interwiki
 
 --- Example ---
+#
 1.
 # This is a script to add a template to the top of the pages with
 # category:catname
